@@ -1,26 +1,152 @@
-@top Program { expression* }
+@top Program { statement* }
+@skip { whitespace | Comment }
 
-@skip { space | LineComment }
-
-expression {
-  Identifier |
-  String |
-  Boolean |
-  Application { "(" expression* ")" }
+@precedence {
+  index @left,
+  member @left,
+  range @left
+  call @right,
+  unary @right,
+  if @left,
+  product @left,
+  sum @left,
+  decimal @right,
+  less_greater @left,
+  equals @left,
+  assign @right,
+  and @left,
+  or @left,
+  else @right,
+  range,
+  identifier,
+  assign @right,
+  statement @cut
 }
+
+statement {
+  IncludeStatement |
+  BoughStatement |
+  DivertStatement |
+  DialogueStatement |
+  ForkStatement |
+  ChoiceStatement |
+  VariableStatement |
+  ForStatement |
+  WhileStatement |
+  IfStatement |
+  SwitchStatement |
+  ClassStatement |
+  EnumStatement |
+  Return |
+  Break |
+  Continue |
+  expression
+}
+
+expression { Binary | Unary | Group | Index | Member | Function | Call | If | Assign | Instance | value }
+
+IncludeStatement { kw<"include"> TemplateString }
+BoughStatement { "===" BoughName body }
+DivertStatement { "=>" BoughName }
+DialogueStatement { ":" Speaker? ":" TemplateString Tag* }
+ForkStatement { kw<"fork"> "^"? (~Identifier)? body }
+ChoiceStatement { "~" "*"? TemplateString body }
+VariableStatement { kw<"extern">? (kw<"var"> | kw<"const">) Assign }
+
+ForStatement { kw<"for"> expression "|" Identifier "|" body }
+WhileStatement { kw<"while"> expression body }
+IfStatement { kw<"if"> expression body (!else kw<"else"> body)? }
+SwitchStatement { kw<"switch"> expression "{" list<Prong> "}" }
+Prong { (expression | kw<"else">) ":" body }
+ClassStatement { kw<"class"> Identifier "=" "{" list<Field> "}" }
+Field { Identifier "=" expression }
+EnumStatement { kw<"enum"> Identifier "=" "{" list<Identifier> "}" }
+
+Identifier { identifier }
+Return { kw<"return"> }
+Break { kw<"break"> }
+Continue { kw<"continue"> }
+
+body { '{' statement* '}' | statement }
+value { Boolean | Nil | Number | List | Map | Set | Identifier | TemplateString | Range }
+
+List { kw<"List"> "{" list<expression>? "}" }
+Map { kw<"Map"> "{" list<MapPair>? "}" }
+MapPair { expression ":" expression }
+Set { kw<"Set"> "{" list<expression>? "}" }
+
+Unary { !unary ("!" expression | "-" expression) }
+Binary { expression
+    (ArithOp | LogicOp | CompareOp)
+    expression }
+
+ArithOp { !product ("*" | "/") | !sum ("+" | "-") }
+LogicOp { !and kw<"and"> | !or kw<"or"> }
+CompareOp { !equals ("==" | "!=") | !less_greater ("<" | ">" | "<=" | ">=")}
+
+Index { expression !index "[" expression "]" }
+Member { expression ~member "." expression }
+Range { expression "." ~range "." expression }
+Function { "|" list<Identifier>? "|" body }
+Call { Identifier !call "(" list<expression>? ")" }
+Instance { kw<"new"> Identifier "{" list<Field>? "}" }
+If { kw<"if"> expression expression !if kw<"else"> expression }
+Assign { Identifier !assign ("/" | "*" | "+" | "-")? "=" expression }
+Group { "(" expression ")" }
 
 @tokens {
-  Identifier { $[a-zA-Z_\-0-9]+ }
+  @precedence { Boolean, Nil, identifier }
+  @precedence { Speaker, whitespace }
+  @precedence { Comment, "/" }
 
-  String { '"' (!["\\] | "\\" _)* '"' }
+  Boolean { "true" | "false" }
+  Nil { "nil" }
 
-  Boolean { "#t" | "#f" }
+  Tag { '#' ![\n\w#]* }
+  Number { int frac?  }
+  int  { '0' | $[1-9] @digit* }
+  frac { '.' @digit+ }
 
-  LineComment { ";" ![\n]* }
+  Speaker { ![\:\\\/]+ }
+  char { @asciiLetter | $[_$\u{a1}-\u{10ffff}] }
+  word { char (char | @digit)* }
+  identifier { word }
+  BoughName { word }
 
-  space { $[ \t\n\r]+ }
+  whitespace { $[ \n\r\t] }
+  "{" "}" "[" "]" "(" ")" "|"
+  ":" "!" "."
+  "+" "-"
+  "*" "/"
 
-  "(" ")"
+  stringStart { '"' }
+  "="[@name=Equal]
+  "==="[@name=Bough]
+  "=>"[@name=Jump]
+  ".."[@name=DotDot]
+  "^"[@name=BackUp]
+  "~"[@name=Choice]
+  "~*"[@name=UniqueChoice]
+
+  Comment[isolate] { "//" ![\n]* }
 }
 
-@detectDelim
+InterpolationEnd[openedBy=InterpolationStart] { "}" }
+stringExpr[@name=Interpolation,isolate] { InterpolationStart expression InterpolationEnd }
+
+@local tokens {
+  InterpolationStart[closedBy=InterpolationEnd] { "{" }
+  stringEnd { '"' }
+  @else stringContent
+}
+
+@skip {} {
+  TemplateString[isolate] {
+    stringStart (stringContent | stringExpr)* stringEnd
+  }
+}
+
+list<item> { item ("," item)* }
+kw<term> { @specialize[@name={term}]<identifier, term> }
+
+@external propSource highlighting from "./highlight"

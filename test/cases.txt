@@ -1,41 +1,197 @@
 # Booleans
-
-#t
-#f
+true
+false
 
 ==>
-
 Program(Boolean, Boolean)
 
 # Identifiers
-
 one
 Two_Three
 
 ==>
-
 Program(Identifier, Identifier)
 
+# Numbers
+12
+1.234
+
+==>
+Program(Number, Number)
+
 # Strings
-
 "hello"
-"one\"\\two"
+"one  _two, hello?"
 
 ==>
+Program(TemplateString, TemplateString)
 
-Program(String, String)
-
-# Applications
-
-(begin
-  (when #t
-    (print (concat "hello" " " "world")))
-  (print "DONE"))
+# Unary
+-5
+!true
 
 ==>
+Program(Unary("-" Number), Unary("!" Boolean))
 
-Program(Application(
-  Identifier,
-  Application(Identifier, Boolean, Application(
-    Identifier, Application(Identifier, String, String, String)))
-  Application(Identifier, String)))
+# Binary
+5 + 4
+4 * 4
+4 + 2 * 2
+
+==>
+Program(
+    Binary(Number, ArithOp("+"), Number),
+    Binary(Number, ArithOp("*"), Number),
+    Binary(Number, ArithOp("+"), Binary(Number, ArithOp("*"), Number)))
+
+# Bough
+=== TestBough {
+    :Speaker: "Words" #tag
+}
+==>
+Program(BoughStatement(
+  Bough,
+  BoughName,
+  "{",
+  DialogueStatement(":" Speaker ":" TemplateString Tag)
+  "}"
+))
+
+# Divert
+=> TestBough
+==>
+Program(DivertStatement(Jump, BoughName))
+
+# Fork
+fork^ {}
+==>
+Program(ForkStatement("fork" BackUp "{" "}"))
+
+# Choice
+fork {
+    ~ "One" {}
+    ~* "Two" {}
+}
+==>
+Program(ForkStatement("fork" "{"
+    ChoiceStatement(Choice TemplateString "{" "}")
+    ChoiceStatement(Choice TemplateString "{" "}")
+ "}" ))
+
+# ForLoop
+for list |item| {}
+==>
+Program(ForStatement("for" Identifier "|" Identifier "|" "{" "}" ))
+
+
+# WhileLoop
+while true {}
+==>
+Program(WhileStatement("while" Boolean "{" "}"))
+
+# IfStatement
+if true {} else {}
+==>
+Program(IfStatement("if" Boolean "{" "}" "else" "{" "}" ))
+
+# SwitchStatement
+switch value {
+    1: {},
+    else: {}
+}
+==>
+Program(SwitchStatement(
+    "switch" Identifier "{"
+    Prong(Number ":" "{" "}")
+    Prong("else" ":" "{" "}")
+    "}"
+))
+
+# Collections
+List{1,2,3}
+Set{1,2,3}
+Map{1:"one",2:"two"}
+==>
+Program(
+    List(List "{" Number, Number, Number "}" ),
+    Set(Set "{" Number, Number, Number "}" ),
+    Map(Map "{" MapPair(Number ":" TemplateString), MapPair(Number ":" TemplateString) "}" )
+)
+
+# Index
+List{1}[0]
+Map{"one":1}["one"]
+==>
+Program(
+    Index(List(List "{" Number "}") "[" Number "]"),
+    Index(Map(Map "{" MapPair(TemplateString ":" Number) "}") "[" TemplateString "]")
+)
+
+# Member
+List{}.add
+==>
+Program(
+    Member(List(List "{" "}") "." Identifier)
+)
+
+# Range
+0..2
+==>
+Program(
+    Range(Number "." "." Number)
+)
+
+# Variable Declaration
+const one = 1
+var two = 2
+extern var three = 3
+==>
+Program(
+    VariableStatement("const" Assign(Identifier Equal Number)),
+    VariableStatement("var" Assign(Identifier Equal Number)),
+    VariableStatement("extern" "var" Assign(Identifier Equal Number))
+)
+
+# Function
+|| {}
+|x, y| {}
+==>
+Program(
+    Function("|" "|" "{" "}"),
+    Function("|" Identifier Identifier "|" "{" "}")
+)
+
+# Class
+class Test = {
+    one = 1
+}
+test = new Test{}
+==>
+Program(
+    ClassStatement("class" Identifier Equal "{" Field(Identifier Equal Number) "}")
+    Assign(Identifier Equal Instance("new" Identifier "{" "}"))
+)
+
+# Enum
+enum Test = {
+    one,
+    two
+}
+TestEnum.one
+==>
+Program(
+    EnumStatement("enum" Identifier Equal "{" Identifier Identifier "}")
+    Member(Identifier "." Identifier)
+)
+
+# Comment
+// this is a comment
+==>
+Program(Comment)
+
+# If
+one = if true 1 else 0
+==>
+Program(
+    Assign(Identifier Equal If("if" Boolean Number "else" Number))
+)
