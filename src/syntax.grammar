@@ -2,6 +2,7 @@
 @skip { whitespace | Comment }
 
 @precedence {
+  return @left,
   index @left,
   member @left,
   range @left
@@ -63,11 +64,11 @@ Field { Identifier "=" expression }
 EnumStatement { kw<"enum"> Identifier "=" "{" list<Identifier> "}" }
 
 Identifier { identifier }
-Return { kw<"return"> }
+Return { kw<"return"> !return expression? }
 Break { kw<"break"> }
 Continue { kw<"continue"> }
 
-body { '{' statement* '}' | statement }
+body { ("{" statement* "}") | statement }
 value { Boolean | Nil | Number | List | Map | Set | Identifier | TemplateString | Range }
 
 List { kw<"List"> "{" list<expression>? "}" }
@@ -86,7 +87,7 @@ CompareOp { !equals ("==" | "!=") | !less_greater ("<" | ">" | "<=" | ">=")}
 
 Index { expression !index "[" expression "]" }
 Member { expression ~member "." expression }
-Range { expression "." ~range "." expression }
+Range { expression ~range ".." expression }
 Function { "|" list<Identifier>? "|" body }
 Call { Identifier !call "(" list<expression>? ")" }
 Instance { kw<"new"> Identifier "{" list<Field>? "}" }

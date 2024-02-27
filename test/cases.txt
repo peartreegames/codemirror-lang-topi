@@ -44,6 +44,14 @@ Program(
     Binary(Number, ArithOp("*"), Number),
     Binary(Number, ArithOp("+"), Binary(Number, ArithOp("*"), Number)))
 
+# Body
+if true "yes"
+if true { "yes" }
+
+==>
+Program(IfStatement("if" Boolean TemplateString), IfStatement("if" Boolean "{" TemplateString "}"))
+
+
 # Bough
 === TestBough {
     :Speaker: "Words" #tag
@@ -97,12 +105,18 @@ Program(IfStatement("if" Boolean "{" "}" "else" "{" "}" ))
 # SwitchStatement
 switch value {
     1: {},
+    2: true,
+    3..5: false,
+    6..10: return nil,
     else: {}
 }
 ==>
 Program(SwitchStatement(
     "switch" Identifier "{"
     Prong(Number ":" "{" "}")
+    Prong(Number ":" Boolean)
+    Prong(Range(Number DotDot Number) ":" Boolean),
+    Prong(Range(Number DotDot Number) ":" Return("return" Nil)),
     Prong("else" ":" "{" "}")
     "}"
 ))
@@ -138,7 +152,7 @@ Program(
 0..2
 ==>
 Program(
-    Range(Number "." "." Number)
+    Range(Number DotDot Number)
 )
 
 # Variable Declaration
